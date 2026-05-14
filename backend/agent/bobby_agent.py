@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 import uuid
@@ -10,6 +11,19 @@ from backend.agent.tool_executor import execute_tool
 from backend.models.database import get_db
 
 MAX_TOOL_ROUNDS = 6
+# 工具执行（如 analyze_asset 可达 100s+）期间，每隔这么久发一次心跳，
+# 防止 Render 等反向代理把"空闲"的 SSE 连接掐断。
+HEARTBEAT_INTERVAL = 12
+
+
+async def _execute_tool_with_heartbeat(tool: str, args: dict):
+    """执行工具，期间周期性 yield 心跳保活；最后 yield ('result', outcome)。"""
+    task = asyncio.create_task(execute_tool(tool, args))
+    while not task.done():
+        done, _ = await asyncio.wait({task}, timeout=HEARTBEAT_INTERVAL)
+        if not done:
+            yield ("heartbeat", None)
+    yield ("result", task.result())
 
 # 明确的"交易执行指令"关键词。命中这些词时，用户是要 Bobby 真的去开仓/平仓，
 # 而不是分析 —— 此时强制走 manage_position，不再依赖 MiMo 在重历史下的工具选择。
@@ -116,7 +130,13 @@ class BobbyAgent:
                     args = {}
                 yield {"type": "tool_call", "tool": tu["name"], "args": args}
 
-                outcome = await execute_tool(tu["name"], args)
+                # 工具执行期间发心跳保活（防 Render 代理掐断空闲 SSE 连接）
+                outcome = {}
+                async for kind, payload in _execute_tool_with_heartbeat(tu["name"], args):
+                    if kind == "heartbeat":
+                        yield {"type": "heartbeat"}
+                    else:
+                        outcome = payload
                 result_data = outcome.get("result", {})
 
                 for card in outcome.get("cards", []):
@@ -147,7 +167,13 @@ class BobbyAgent:
         await self._save_message(conversation_id, "user", message)
 
         yield {"type": "tool_call", "tool": tool, "args": args}
-        outcome = await execute_tool(tool, args)
+        # execute_tool 可能跑 1-2 分钟（analyze_asset）—— 期间发心跳保活
+        outcome = {}
+        async for kind, payload in _execute_tool_with_heartbeat(tool, args):
+            if kind == "heartbeat":
+                yield {"type": "heartbeat"}
+            else:
+                outcome = payload
         result_data = outcome.get("result", {})
         emitted_cards = []
         for card in outcome.get("cards", []):

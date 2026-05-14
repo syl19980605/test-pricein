@@ -191,5 +191,6 @@ export type StreamChunk =
   | { type: 'text'; content: string }
   | { type: 'tool_call'; tool: string; args: Record<string, unknown> }
   | { type: 'card'; card: CardPayload }
+  | { type: 'heartbeat' }   // 保活心跳 —— 前端忽略，仅用于撑住 SSE 连接
   | { type: 'done' }
   | { type: 'error'; message: string }
