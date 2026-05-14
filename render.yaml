@@ -1,0 +1,24 @@
+# Render 部署蓝图 —— 单服务（FastAPI 同时托管前端 + API）
+# 在 Render 控制台选 "New +" → "Blueprint"，指向本仓库即可。
+services:
+  - type: web
+    name: bobby-ai-agent
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter            # $7/月付费档：常驻不休眠，点链接即开即用
+    region: singapore        # 离 MiMo(cn) 和数据源较近，可按需改
+    healthCheckPath: /api/health
+    envVars:
+      # 密钥 —— sync:false 表示不写进本文件/不进 git，在 Render 控制台手动填
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # 以下非密钥，可直接给默认值（也可在控制台覆盖）
+      - key: ANTHROPIC_BASE_URL
+        value: https://token-plan-cn.xiaomimimo.com/anthropic
+      - key: BOBBY_MODEL
+        value: mimo-v2.5-pro
+      - key: MONITOR_INTERVAL_SECONDS
+        value: "300"
+      # 可选：NewsAPI key（不填则只用 Yahoo Finance 新闻）
+      - key: NEWSAPI_KEY
+        sync: false
