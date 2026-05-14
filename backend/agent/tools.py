@@ -7,7 +7,7 @@ BOBBY_TOOLS = [
             "properties": {
                 "symbol": {
                     "type": "string",
-                    "description": "资产代码，如 AAPL、BTC-USD、600519.SS、GC=F",
+                    "description": "资产代码，如 AAPL、BTC-USD、GC=F、NVDA",
                 }
             },
             "required": ["symbol"],

@@ -21,9 +21,9 @@ def _safe_num(v, default=0.0):
         return default
     return f
 
+# 注：A股（600519.SS 茅台 / 688256.SS 寒武纪）已移除 —— Yahoo Finance 不向
+# 海外云 IP 提供 A 股数据，部署到 Render（新加坡）后拉不到。只保留能稳定取数的标的。
 ASSET_REGISTRY = {
-    "600519.SS": {"name": "贵州茅台", "asset_class": AssetClass.A_SHARE},
-    "688256.SS": {"name": "寒武纪", "asset_class": AssetClass.A_SHARE},
     "GC=F":     {"name": "黄金期货", "asset_class": AssetClass.COMMODITY},
     "BTC-USD":  {"name": "比特币", "asset_class": AssetClass.CRYPTO},
     "AAPL":     {"name": "Apple", "asset_class": AssetClass.US_STOCK},
